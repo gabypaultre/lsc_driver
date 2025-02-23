@@ -1,0 +1,3 @@
+test: hid_hidraw lsc_servocontrol
+hid_hidraw: hidapi-hidraw
+lsc_servocontrol: hid_hidraw
