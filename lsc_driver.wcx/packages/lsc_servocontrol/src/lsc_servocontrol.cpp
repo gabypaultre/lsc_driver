@@ -13,7 +13,7 @@ namespace lsc_servocontrol {
     }
 
     bool lsc_servocontrol::connect() {
-        if (_hid_hidraw_instance.open(VENDOR_ID, PRODUCT_ID)) {
+        if (_hid_hidraw_instance.openDevice(VENDOR_ID, PRODUCT_ID)) {
             std::cout << "HID Connection established" << std::endl;
             return true;
         } else {
@@ -104,30 +104,21 @@ namespace lsc_servocontrol {
     }
 
     bool lsc_servocontrol::getBatteryVoltage(uint16_t& voltage) {
-        if (!isConnected()) {
-            std::cout << "HID Connection not established" << std::endl;
-            return false;
-        }
-
         if (!sendCommand(CMD_GET_BATTERY_VOLTAGE, {})) {
-            std::cout << "Failed to send command" << std::endl;
+            std::cerr << "[ERREUR] Impossible d'envoyer la commande de tension de batterie !" << std::endl;
             return false;
         }
-
+    
         std::vector<uint8_t> response;
-        if (!receiveResponse(response)) {
-            std::cout << "Failed to receive response" << std::endl;
+        if (!receiveResponse(response, 6)) {
+            std::cerr << "[ERREUR] Aucune réponse valide reçue pour la tension de batterie !" << std::endl;
             return false;
         }
-
-        if (response.size() != 6 || response[2] != 0x04 || response[3] != CMD_GET_BATTERY_VOLTAGE) {
-            std::cout << "Invalid response" << std::endl;
-            return false;
-        }
-
-        voltage = static_cast<uint16_t>(response[4]) | (static_cast<uint16_t>(response[5]) << 8);
-        std::cout << "Battery Voltage: " << voltage << " mV" << std::endl;
-
+    
+        // Extraction des valeurs de tension
+        voltage = static_cast<uint16_t>(response[4] | (response[5] << 8));
+        std::cout << "[INFO] Tension de la batterie : " << voltage << " mV" << std::endl;
+    
         return true;
     }
 
