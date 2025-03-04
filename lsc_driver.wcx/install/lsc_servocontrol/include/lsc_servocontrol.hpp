@@ -32,10 +32,14 @@ public:
     bool sendCommand(uint8_t cmd, const std::vector<uint8_t>& params);
     bool receiveResponse(std::vector<uint8_t>& response, int timeout = 500);
 
-    bool moveServo(const std::vector<std::tuple<uint8_t, uint16_t>>& servos, uint16_t time);
+    // bool moveServo(const std::vector<std::tuple<uint8_t, uint16_t>>& servos, uint16_t time);
+    bool moveServo(const std::vector<std::tuple<uint8_t, double>>& servos, uint16_t time);
+
     bool getBatteryVoltage(uint16_t& voltage);
     bool powerOffServos(const std::vector<uint8_t>& servo_ids);
-    std::map<uint8_t, uint16_t> readServoPositions(const std::vector<uint8_t>& servo_ids);
+    
+    //std::map<uint8_t, uint16_t> readServoPositions(const std::vector<uint8_t>& servo_ids);
+    std::map<uint8_t, double> readServoPositions(const std::vector<uint8_t>& servo_ids);
 
     bool runActionGroup(uint8_t group_id, uint16_t repetitions);
     bool stopActionGroup();
@@ -64,6 +68,9 @@ private:
 
     static constexpr uint8_t CMD_ACTION_GROUP_STOP = 0x07; //Same as CMD_ACTION_STOP but not same function
     static constexpr uint8_t CMD_ACTION_GROUP_COMPLETE = 0x08;
+
+    static uint16_t radiansToPosition(double radians);
+    static double positionToRadians(uint16_t position);
 
     std::vector<uint8_t> buildCommandPacket(uint8_t cmd, const std::vector<uint8_t>& params);
 };

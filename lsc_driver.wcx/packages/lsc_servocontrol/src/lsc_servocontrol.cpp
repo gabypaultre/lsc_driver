@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cmath>
 #include "lsc_servocontrol.hpp"
 
 namespace lsc_servocontrol {
@@ -74,33 +75,37 @@ namespace lsc_servocontrol {
         return true;
     }
 
-    bool lsc_servocontrol::moveServo(const std::vector<std::tuple<uint8_t, uint16_t>>& servos, uint16_t time) {
+    bool lsc_servocontrol::moveServo(const std::vector<std::tuple<uint8_t, double>>& servos, uint16_t time) {
         if (!isConnected()) {
             std::cout << "HID Connection not established" << std::endl;
             return false;
         }
-
+    
         if (servos.empty()) {
             std::cout << "No servos specified" << std::endl;
             return false;
         }
-
+    
         std::vector<uint8_t> params;
         params.push_back(static_cast<uint8_t>(servos.size()));
         params.push_back(static_cast<uint8_t>(time & 0xFF)); // Time LSB
         params.push_back(static_cast<uint8_t>((time >> 8) & 0xFF)); // Time MSB
-
+    
         for (const auto& servo : servos) {
             uint8_t id = std::get<0>(servo);
-            uint16_t position = std::get<1>(servo);
-
+            double angleRad = std::get<1>(servo); // L'utilisateur donne un angle en radians
+            uint16_t position = radiansToPosition(angleRad); // Convertit en position 0-1000
+    
             params.push_back(id);
             params.push_back(static_cast<uint8_t>(position & 0xFF)); // Position LSB
             params.push_back(static_cast<uint8_t>((position >> 8) & 0xFF)); // Position MSB
         }
-
+    
         return sendCommand(CMD_SERVO_MOVE, params);
     }
+    
+
+
 
     bool lsc_servocontrol::getBatteryVoltage(uint16_t& voltage) {
         if (!sendCommand(CMD_GET_BATTERY_VOLTAGE, {})) {
@@ -139,63 +144,66 @@ namespace lsc_servocontrol {
         return sendCommand(CMD_MULT_SERVO_UNLOAD, params);
     }
 
-    std::map<uint8_t, uint16_t> lsc_servocontrol::readServoPositions(const std::vector<uint8_t>& servo_ids) {
-        std::map<uint8_t, uint16_t> positions;
-
+    std::map<uint8_t, double> lsc_servocontrol::readServoPositions(const std::vector<uint8_t>& servo_ids) {
+        std::map<uint8_t, double> positions;
+    
         if (!isConnected()) {
             std::cout << "HID Connection not established" << std::endl;
             return positions;
         }
-
+    
         if (servo_ids.empty()) {
             std::cout << "No servos specified" << std::endl;
             return positions;
         }
-
+    
         std::vector<uint8_t> params;
         params.push_back(static_cast<uint8_t>(servo_ids.size()));
         params.insert(params.end(), servo_ids.begin(), servo_ids.end());
-
+    
         if (!sendCommand(CMD_MULT_SERVO_POS_READ, params)) {
             std::cout << "Failed to send command" << std::endl;
             return positions;
         }
-
+    
         // Wait for response
         std::vector<uint8_t> response;
         if (!receiveResponse(response)) {
             std::cout << "Failed to receive response" << std::endl;
             return positions;
         }
-
+    
         if (response.size() < 5 || response[3] != CMD_MULT_SERVO_POS_READ) {
             std::cout << "Invalid response" << std::endl;
             return positions;
         }
-
+    
         // Number of servos in the response
         uint8_t numServos = response[4];
         if (numServos != servo_ids.size()) {
             std::cout << "Warning: Number of servos in response does not match request" << std::endl;
         }
-
+    
         // Extract positions
-        size_t index = 5; // Position after `Header`, `Length`, `Command`, `Nb Servos`
+        size_t index = 5; // Position after Header, Length, Command, Nb Servos
         for (uint8_t i = 0; i < numServos; ++i) {
             if (index + 2 >= response.size()) {
                 std::cout << "Warning: Incomplete position data for servo " << (int)response[index] << std::endl;
                 break;
             }
-
+    
             uint8_t servo_id = response[index];
             uint16_t position = static_cast<uint16_t>(response[index + 1]) | (static_cast<uint16_t>(response[index + 2]) << 8);
-            positions[servo_id] = position;
-
+            double angleRad = positionToRadians(position); // Convertir en radians
+    
+            positions[servo_id] = angleRad;
+    
             index += 3; // Move to the next block of 3 bytes (ID, Pos LSB, Pos MSB)
         }
-
+    
         return positions;
     }
+    
 
     bool lsc_servocontrol::runActionGroup(uint8_t group_id, uint16_t repetitions) {
         if (!isConnected()) {
@@ -292,6 +300,14 @@ namespace lsc_servocontrol {
 
         std::cout << "Action Group " << (int)group_id << " completed after " << repetitions << " repetitions.\n";
         return true;
+    }
+
+    uint16_t lsc_servocontrol::radiansToPosition(double radians) {
+        return static_cast<uint16_t>((radians + (M_PI/2)) * (1000.0 * 180.0) / (240 * M_PI));
+    }
+
+    double lsc_servocontrol::positionToRadians(uint16_t position) {
+        return static_cast<double>(position) * (240 * M_PI) / (1000.0 * 180.0);
     }
 
     std::vector<uint8_t> lsc_servocontrol::buildCommandPacket(uint8_t cmd, const std::vector<uint8_t>& params) {
