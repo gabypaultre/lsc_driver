@@ -303,11 +303,13 @@ namespace lsc_servocontrol {
     }
 
     uint16_t lsc_servocontrol::radiansToPosition(double radians) {
-        return static_cast<uint16_t>(radians) * (1000.0 * 180.0) / (240 * M_PI);
+        double pos = radians * (1000.0 * 180.0) / (240 * M_PI);
+        return static_cast<uint16_t>(pos);
     }
 
     double lsc_servocontrol::positionToRadians(uint16_t position) {
-        return static_cast<double>(position) * (240 * M_PI) / (1000.0 * 180.0);
+        double rad = static_cast<double>(position) * (240 * M_PI) / (1000.0 * 180.0);
+        return rad;
     }
 
     std::vector<uint8_t> lsc_servocontrol::buildCommandPacket(uint8_t cmd, const std::vector<uint8_t>& params) {

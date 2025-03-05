@@ -20,18 +20,17 @@ int main() {
     }
 
     uint8_t servo_id = 1;
-    double angle = 0.9*0; // 90°
+    double angle = M_PI;
 
     std::cout << "🔄 Déplacement du servo ID " << (int)servo_id << " vers " << angle << " rad\n";
     controller.moveServo({{servo_id, angle}}, 1000);
 
-    wait(1200); // Attente que le mouvement soit terminé
+    wait(1200);
 
-    // Lecture de la position après le mouvement
     std::map<uint8_t, double> positions = controller.readServoPositions({servo_id});
 
     if (positions.find(servo_id) != positions.end()) {
-        std::cout << "✅ Position actuelle du servo " << (int)servo_id 
+        std::cout << "Position actuelle du servo " << (int)servo_id 
                   << " : " << positions[servo_id] << " rad\n";
     } else {
         std::cerr << "❌ Échec de lecture de la position du servo " << (int)servo_id << "\n";
