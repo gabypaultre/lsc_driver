@@ -19,27 +19,24 @@ int main() {
         return 1;
     }
 
-    uint8_t servo_id = 1; 
-    double angle_1 = -(M_PI / 2);
-    double angle_2 = -(M_PI / 2) + (M_PI / 4);
-    double angle_3 = -(M_PI / 2) + (M_PI / 2);
-    double angle_4 = -(M_PI / 2) + (3 * M_PI / 4);
-    double angle_5 = -(M_PI / 2) + M_PI;
+    uint8_t servo_id = 1;
+    double angle = 0.9*0; // 90°
 
-    while(1) {
-        controller.moveServo({{servo_id, angle_1}}, 10);
-        wait(500);
-        controller.moveServo({{servo_id, angle_2}}, 10);
-        wait(500);
-        controller.moveServo({{servo_id, angle_3}}, 10);
-        wait(500);
-        controller.moveServo({{servo_id, angle_4}}, 10);
-        wait(500);
-        controller.moveServo({{servo_id, angle_5}}, 10);
-        wait(500);
+    std::cout << "🔄 Déplacement du servo ID " << (int)servo_id << " vers " << angle << " rad\n";
+    controller.moveServo({{servo_id, angle}}, 1000);
+
+    wait(1200); // Attente que le mouvement soit terminé
+
+    // Lecture de la position après le mouvement
+    std::map<uint8_t, double> positions = controller.readServoPositions({servo_id});
+
+    if (positions.find(servo_id) != positions.end()) {
+        std::cout << "✅ Position actuelle du servo " << (int)servo_id 
+                  << " : " << positions[servo_id] << " rad\n";
+    } else {
+        std::cerr << "❌ Échec de lecture de la position du servo " << (int)servo_id << "\n";
     }
-   
-    controller.disconnect();
 
+    controller.disconnect();
     return 0;
 }
